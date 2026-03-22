@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>消消乐·点击即消版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f6f6f6;
+            padding-top: 20px;
+            font-family: Arial;
+        }
+        #score {
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+        #game {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            gap: 4px;
+            background: #ccc;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .cell:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="score">分数：0</div>
+    <div id="game"></div>
+
+<script>
+const SIZE = 6;
+const EMOJI = ['🍎', '🍌', '🍇', '🍓', '🍉', '🍒'];
+let grid = [];
+let score = 0;
+const gameEl = document.getElementById('game');
+const scoreEl = document.getElementById('score');
+
+// 初始化棋盘
+function init() {
+    grid = [];
+    gameEl.innerHTML = '';
+    for (let r=0; r<SIZE; r++) {
+        grid[r] = [];
+        for (let c=0; c<SIZE; c++) {
+            const e = EMOJI[Math.floor(Math.random()*EMOJI.length)];
+            grid[r][c] = e;
+            const div = document.createElement('div');
+            div.className = 'cell';
+            div.dataset.r = r;
+            div.dataset.c = c;
+            div.textContent = e;
+            div.onclick = clickCell;
+            gameEl.appendChild(div);
+        }
+    }
+}
+
+// 点击格子
+function clickCell(e) {
+    const r = +e.target.dataset.r;
+    const c = +e.target.dataset.c;
+    const target = grid[r][c];
+    
+    // 找到所有相邻相同的（连通区域）
+    const visited = Array(SIZE).fill().map(()=>Array(SIZE).fill(false));
+    const list = [];
+    function dfs(x,y) {
+        if (x<0||y<0||x>=SIZE||y>=SIZE) return;
+        if (visited[x][y] || grid[x][y]!==target) return;
+        visited[x][y] = true;
+        list.push({x,y});
+        dfs(x+1,y); dfs(x-1,y); dfs(x,y+1); dfs(x,y-1);
+    }
+    dfs(r,c);
+    
+    // 至少2个就消
+    if (list.length >= 2) {
+        score += list.length * 10;
+        scoreEl.textContent = `分数：${score}`;
+        
+        // 消除
+        list.forEach(({x,y})=>{
+            grid[x][y] = null;
+        });
+        
+        // 下落
+        setTimeout(fall, 200);
+    }
+}
+
+// 下落 + 顶部补新
+function fall() {
+    // 每一列往下掉
+    for (let c=0; c<SIZE; c++) {
+        let col = [];
+        for (let r=0; r<SIZE; r++) {
+            if (grid[r][c]!==null) col.push(grid[r][c]);
+        }
+        // 上面补空，下面填有值的
+        const newCol = Array(SIZE - col.length).fill(null).concat(col);
+        for (let r=0; r<SIZE; r++) {
+            grid[r][c] = newCol[r];
+        }
+    }
+    // 补新图案
+    for (let r=0; r<SIZE; r++) {
+        for (let c=0; c<SIZE; c++) {
+            if (grid[r][c] === null) {
+                grid[r][c] = EMOJI[Math.floor(Math.random()*EMOJI.length)];
+            }
+        }
+    }
+    // 刷新界面
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach((cell,i)=>{
+        const r = Math.floor(i / SIZE);
+        const c = i % SIZE;
+        cell.textContent = grid[r][c];
+    });
+}
+
+init();
+</script>
+</body>
+</html>
